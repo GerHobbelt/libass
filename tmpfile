@@ -1,0 +1,12 @@
+Owner: Oneric
+Primary-Key-ID: 5EE63F2A71BF132CFE3567E1DFFE615F2824C720
+Signing-Subkey-ID: DDAFC19E46B2AD2D6B26F84397A08E0CFFD70951
+
+(
+ Signing-Subkey-ID is shown with git log --show-signatures
+ or git verify-commit, git verify-tag, but the primary key
+ ID is important for trust and identification, the subkey
+ can change without the primary key changing.
+
+ Key can be fetched from keys.openpgp.org via primary ID
+)
