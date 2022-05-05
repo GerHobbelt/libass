@@ -150,41 +150,36 @@ typedef struct ass_event {
 } ASS_Event;
 
 /**
- * Support for (xy-)vsfilter mangled colors
+ * Support for (xy-)VSFilter mangled colors
  *
- * Generally, xy-vsfilter emulates the classic vsfilter behavior of
- * rendering directly into the (usually YCbCr) video. vsfilter is
- * hardcoded to use BT.601(TV) as target colorspace when converting
- * the subtitle RGB color to the video colorspace. This led to major
- * breakage when HDTV video was introduced: HDTV typically uses
- * BT.709(TV), but vsfilter still used BT.601(TV) for conversion.
- *
- * This means classic vsfilter will mangle colors as follows:
- *
- *    screen_rgb = bt_709tv_to_rgb(rgb_to_bt601tv(ass_rgb))
- *
- * Or in general:
+ * Generally, VSFiters renders into the (usually YCbCr) video frame directly.
+ * Classic VSFilter was hardcoded to use TV-range BT.601 as a target colourspace
+ * when converting the RGB colours specified in the subtitles. Especially once
+ * HDTV video (typically using BT.709) started to appear this became a problem
+ * as VSFilter would now often do an incorrect conversion.
+ * I.e. classic VSFilter magles the colours as follows:
  *
  *    screen_rgb = video_csp_to_rgb(rgb_to_bt601tv(ass_rgb))
  *
  * where video_csp is the colorspace of the video with which the
  * subtitle was muxed.
  *
- * xy-vsfilter did not fix this, but instead introduced explicit
- * rules how colors were mangled by adding a "YCbCr Matrix" header.
- * If this header specifies a real colorspace (like BT.601(TV) etc.),
- * xy-vsfilter behaves exactly like vsfilter, but using the specified
- * colorspace for conversion of ASS input RGB to screen RGB:
+ * xy-VSFilter and XySubFilter had to keep this by default for compatibility
+ * with existing subtitles which may contain types carefully matched to the
+ * video colour while working around/with the mangling.
+ * To give future subs the option to avoid this mangling a new header was
+ * introduced to choose the colourspace used for conversion from ASS' RGB.
+ * If the header is unset, it will default to BT.601(TV Range):
  *
  *    screen_rgb = video_csp_to_rgb(rgb_to_ycbcr_header_csp(ass_rgb))
  *
- * Further, xy-vsfilter behaves like vsfilter with no changes if the header
- * is missing.
- *
- * The special value "None" means untouched RGB values. Keep in mind that
- * some version of xy-vsfilter are buggy and don't interpret this correctly.
- * It appears some people are advocating that this header value is
- * intended for situations where exact colors do not matter.
+ * The special value "None" means untouched RGB values. However, while
+ * XySubFilter and typically libass users do implement it like this,
+ * xy-VSFilter still renders into the YCbCr video frame but actually doesn't
+ * know the video colourspace. It thus makes a resolution dependent guess
+ * between TV.601 and TV.709. Furthermore MPC-HC's internal subtitle renderer
+ * has swapped the meaning of "no header" and an explict "None", which also
+ * breaks existing older subtitles.
  *
  * Note that newer Aegisub versions (the main application to produce ASS
  * subtitle scripts) have an option that tries not to mangle the colors. It
@@ -195,7 +190,7 @@ typedef struct ass_event {
  *
  * In general, misinterpreting this header or not using it will lead to
  * slightly different subtitle colors, which can matter if the subtitle
- * attempts to match solid colored areas in the video.
+ * contains aforementioned colour-matched types.
  *
  * Note that libass doesn't change colors based on this header. It
  * absolutely can't do that, because the video colorspace is required
